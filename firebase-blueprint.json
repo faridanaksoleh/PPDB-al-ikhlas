@@ -1,0 +1,187 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile linked to Firebase Auth UID with verified role",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "User UID from Firebase Authentication",
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "full_name": {
+          "type": "string",
+          "description": "Full name of the user",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the user",
+          "maxLength": 150
+        },
+        "role": {
+          "type": "string",
+          "description": "Role determining permissions in PPDB system",
+          "enum": ["admin", "coordinator", "participant"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when profile was created"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when profile was last updated"
+        }
+      },
+      "required": ["id", "full_name", "role", "createdAt", "updatedAt"]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Trusted administrative authorization record",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "Admin or coordinator email"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin", "coordinator"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["email", "role"]
+    },
+    "ParticipantRecord": {
+      "title": "ParticipantRecord",
+      "description": "PPDB Admission Test Participant Data",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique participant record ID",
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "userId": {
+          "type": "string",
+          "description": "User UID from Firebase Auth",
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "participant_number": {
+          "type": "string",
+          "description": "Unique PPDB Participant Exam Number",
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "maxLength": 30
+        },
+        "applied_grade": {
+          "type": "string",
+          "description": "Education level applied for",
+          "enum": ["KB", "TK-A", "TK-B", "SD-1", "SMP-7", "SMA-10"]
+        },
+        "registration_status": {
+          "type": "string",
+          "description": "Document registration completion status",
+          "enum": ["draft", "submitted", "verified", "rejected"]
+        },
+        "verification_status": {
+          "type": "string",
+          "description": "Verification status by admission committee",
+          "enum": ["pending", "verified", "revision_required", "rejected"]
+        },
+        "origin_school": {
+          "type": "string",
+          "maxLength": 150
+        },
+        "parent_phone": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "birth_date": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "userId", "participant_number", "applied_grade", "registration_status", "verification_status"]
+    },
+    "AnnouncementRecord": {
+      "title": "AnnouncementRecord",
+      "description": "Official Admission Announcements",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 200
+        },
+        "content": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 5000
+        },
+        "status": {
+          "type": "string",
+          "enum": ["draft", "published", "archived"]
+        },
+        "target_role": {
+          "type": "string",
+          "enum": ["all", "participant", "coordinator", "admin"]
+        },
+        "published_at": {
+          "type": "string"
+        },
+        "expires_at": {
+          "type": "string"
+        },
+        "authorId": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "title", "content", "status", "target_role"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Stores user profiles with assigned roles"
+    },
+    "/admins/{adminId}": {
+      "schema": "AdminRecord",
+      "description": "Stores trusted admin & coordinator records"
+    },
+    "/participants/{participantId}": {
+      "schema": "ParticipantRecord",
+      "description": "Stores admission test participants linked to their user account"
+    },
+    "/announcements/{announcementId}": {
+      "schema": "AnnouncementRecord",
+      "description": "Official broadcast announcements for participants and staff"
+    }
+  }
+}

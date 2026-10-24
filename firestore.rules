@@ -1,0 +1,120 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. GLOBAL SAFETY NET (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. HELPER FUNCTIONS
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Trusted Admin check using database document or bootstrapped developer email
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'itspuyd@gmail.com'
+      );
+    }
+
+    // Coordinator check (Admin or assigned coordinator)
+    function isCoordinator() {
+      return isAdmin() || (
+        isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'coordinator'
+      );
+    }
+
+    // 3. COLLECTION: USERS / PROFILES
+    match /users/{userId} {
+      allow get: if isSignedIn() && (request.auth.uid == userId || isCoordinator());
+      allow list: if isCoordinator();
+
+      // Users can register their own profile as participant, or admin can create any role
+      allow create: if isSignedIn() && isValidId(userId) && request.auth.uid == userId && (
+        incoming().role == 'participant' || isAdmin()
+      ) && incoming().full_name is string && incoming().full_name.size() >= 2 && incoming().full_name.size() <= 120;
+
+      // Users can only update their full_name, role cannot be self-elevated
+      allow update: if isSignedIn() && (
+        isAdmin() || (
+          request.auth.uid == userId &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['full_name', 'updatedAt']) &&
+          incoming().full_name is string &&
+          incoming().full_name.size() >= 2 &&
+          incoming().full_name.size() <= 120
+        )
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // 4. COLLECTION: ADMINS (Strict authorization store)
+    match /admins/{adminId} {
+      allow read, write: if isAdmin();
+    }
+
+    // 5. COLLECTION: PARTICIPANTS
+    match /participants/{participantId} {
+      // Participant can only get their own document, admins/coordinators can access all
+      allow get: if isCoordinator() || (
+        isSignedIn() && resource.data.userId == request.auth.uid
+      );
+
+      allow list: if isCoordinator() || (
+        isSignedIn() && resource.data.userId == request.auth.uid
+      );
+
+      // Only admins and coordinators can insert or mutate participant status
+      allow create: if isCoordinator() && isValidId(participantId);
+      allow update: if isCoordinator();
+      allow delete: if isAdmin();
+    }
+
+    // 6. COLLECTION: ANNOUNCEMENTS
+    match /announcements/{announcementId} {
+      // Authenticated users and participants can read published announcements
+      allow get: if isCoordinator() || (
+        resource.data.status == 'published' && (
+          resource.data.target_role == 'all' ||
+          (isSignedIn() && resource.data.target_role == 'participant')
+        )
+      );
+
+      allow list: if isCoordinator() || (
+        resource.data.status == 'published' && (
+          resource.data.target_role == 'all' ||
+          (isSignedIn() && resource.data.target_role == 'participant')
+        )
+      );
+
+      // Only admin and coordinator can manage announcements
+      allow create: if isCoordinator() && isValidId(announcementId) &&
+        incoming().title is string && incoming().title.size() >= 3 &&
+        incoming().content is string && incoming().content.size() >= 5;
+
+      allow update: if isCoordinator() &&
+        incoming().title is string && incoming().title.size() >= 3 &&
+        incoming().content is string && incoming().content.size() >= 5;
+
+      allow delete: if isAdmin();
+    }
+  }
+}

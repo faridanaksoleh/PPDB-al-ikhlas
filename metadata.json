@@ -1,0 +1,6 @@
+{
+  "name": "Al-Ikhlas Admission Test",
+  "description": "Portal tes seleksi online dan penerimaan peserta didik baru (PPDB) Sekolah Al-Ikhlas dengan autentikasi berbasis peran dan manajemen terintegrasi.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
